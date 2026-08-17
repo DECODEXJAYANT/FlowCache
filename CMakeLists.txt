@@ -12,6 +12,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_executable(flowcache
     src/main.cpp
+    src/Cache.cpp
 )
 
 target_include_directories(flowcache

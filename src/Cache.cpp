@@ -75,7 +75,10 @@ void Cache::evictLRU() {
     evictions_++;
 }
 
+
 void Cache::put(const string& key, const string& value) {
+
+    lock_guard<mutex> lock(mutex_);
 
     // Check if key already exists
     auto it = data_.find(key);
@@ -105,6 +108,8 @@ void Cache::put(const string& key, const string& value) {
 
 optional<string> Cache::get(const string& key) {
 
+    lock_guard<mutex> lock(mutex_);
+
     auto it = data_.find(key);
 
     if (it == data_.end()) {
@@ -124,6 +129,8 @@ optional<string> Cache::get(const string& key) {
 
 bool Cache::remove(const string& key) {
 
+    lock_guard<mutex> lock(mutex_);
+
     auto it = data_.find(key);
 
     if (it == data_.end()) {
@@ -142,26 +149,43 @@ bool Cache::remove(const string& key) {
 }
 
 size_t Cache::size() const {
+
+    lock_guard<mutex> lock(mutex_);
+
     return data_.size();
 }
 
 size_t Cache::capacity() const {
+
+    lock_guard<mutex> lock(mutex_);
+
     return capacity_;
 }
 
 size_t Cache::hits() const {
+
+    lock_guard<mutex> lock(mutex_);
+
     return hits_;
 }
 
 size_t Cache::misses() const {
+
+    lock_guard<mutex> lock(mutex_);
+
     return misses_;
 }
 
 size_t Cache::evictions() const {
+
+    lock_guard<mutex> lock(mutex_);
+
     return evictions_;
 }
 
 double Cache::hitRatio() const {
+    
+    lock_guard<mutex> lock(mutex_);
 
     size_t totalRequests = hits_ + misses_;
 

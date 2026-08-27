@@ -4,6 +4,7 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <mutex>
 
 using namespace std;
 
@@ -33,6 +34,7 @@ namespace flowcache
         double hitRatio() const;
 
     private:
+        mutable mutex mutex_;
         struct Node
         {
             string key;

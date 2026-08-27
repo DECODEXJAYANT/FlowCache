@@ -1,6 +1,8 @@
 #include <iostream>
 #include <string>
 #include <cstdlib>
+#include <thread>
+#include <vector>
 
 #include "flowcache/Cache.h"
 
@@ -221,6 +223,48 @@ void testEmptyKeyAndValue()
         "Empty key and value");
 }
 
+void testConcurrentAccess() {
+
+    flowcache::Cache cache(100);
+
+    const int threadCount = 4;
+    const int operationsPerThread = 1000;
+
+    vector<thread> threads;
+
+    for (int i = 0; i < threadCount; i++) {
+
+        threads.emplace_back([&cache, i]() {
+
+            for (int j = 0; j < operationsPerThread; j++) {
+
+                string key = "thread_" + to_string(i) +
+                             "_key_" + to_string(j % 10);
+
+                string value = "value_" + to_string(j);
+
+                cache.put(key, value);
+
+                cache.get(key);
+            }
+        });
+    }
+
+    for (auto& thread : threads) {
+        thread.join();
+    }
+
+    check(
+        cache.size() <= cache.capacity(),
+        "Concurrent access respects cache capacity"
+    );
+
+    check(
+        cache.hits() == threadCount * operationsPerThread,
+        "Concurrent GET operations tracked correctly"
+    );
+}
+
 int main()
 {
 
@@ -233,12 +277,14 @@ int main()
     testRemove();
     testLRUEviction();
     testStatistics();
-    
+
     testCapacityOne();
     testUpdateExistingKey();
     testRemoveMissingKey();
     testRepeatedGet();
     testEmptyKeyAndValue();
+
+    testConcurrentAccess();
 
     cout << "\nAll tests passed!" << endl;
 

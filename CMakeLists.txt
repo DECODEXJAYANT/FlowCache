@@ -19,3 +19,13 @@ target_include_directories(flowcache
     PRIVATE
         ${PROJECT_SOURCE_DIR}/include
 )
+
+add_executable(flowcache_tests
+    tests/test_cache.cpp
+    src/Cache.cpp
+)
+
+target_include_directories(flowcache_tests
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+)

@@ -5,6 +5,7 @@
 #include <string>
 #include <unordered_map>
 #include <mutex>
+#include <vector>
 
 using namespace std;
 
@@ -32,6 +33,8 @@ namespace flowcache
         size_t evictions() const;
 
         double hitRatio() const;
+
+        vector<string> keys() const;
 
     private:
         mutable mutex mutex_;

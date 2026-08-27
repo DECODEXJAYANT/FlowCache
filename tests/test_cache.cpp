@@ -223,7 +223,8 @@ void testEmptyKeyAndValue()
         "Empty key and value");
 }
 
-void testConcurrentAccess() {
+void testConcurrentAccess()
+{
 
     flowcache::Cache cache(100);
 
@@ -232,9 +233,11 @@ void testConcurrentAccess() {
 
     vector<thread> threads;
 
-    for (int i = 0; i < threadCount; i++) {
+    for (int i = 0; i < threadCount; i++)
+    {
 
-        threads.emplace_back([&cache, i]() {
+        threads.emplace_back([&cache, i]()
+                             {
 
             for (int j = 0; j < operationsPerThread; j++) {
 
@@ -246,23 +249,21 @@ void testConcurrentAccess() {
                 cache.put(key, value);
 
                 cache.get(key);
-            }
-        });
+            } });
     }
 
-    for (auto& thread : threads) {
+    for (auto &thread : threads)
+    {
         thread.join();
     }
 
     check(
         cache.size() <= cache.capacity(),
-        "Concurrent access respects cache capacity"
-    );
+        "Concurrent access respects cache capacity");
 
     check(
         cache.hits() == threadCount * operationsPerThread,
-        "Concurrent GET operations tracked correctly"
-    );
+        "Concurrent GET operations tracked correctly");
 }
 
 int main()
@@ -285,6 +286,32 @@ int main()
     testEmptyKeyAndValue();
 
     testConcurrentAccess();
+
+    flowcache::Cache cache(3);
+
+    cache.put("A", "Apple");
+    cache.put("B", "Banana");
+    cache.put("C", "Cherry");
+
+    auto keys = cache.keys();
+
+    check(
+        keys.size() == 3 &&
+            keys[0] == "C" &&
+            keys[1] == "B" &&
+            keys[2] == "A",
+        "Keys return MRU to LRU");
+
+    cache.get("A");
+
+    keys = cache.keys();
+
+    check(
+        keys.size() == 3 &&
+            keys[0] == "A" &&
+            keys[1] == "C" &&
+            keys[2] == "B",
+        "GET updates key order");
 
     cout << "\nAll tests passed!" << endl;
 

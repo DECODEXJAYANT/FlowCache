@@ -184,7 +184,7 @@ size_t Cache::evictions() const {
 }
 
 double Cache::hitRatio() const {
-    
+
     lock_guard<mutex> lock(mutex_);
 
     size_t totalRequests = hits_ + misses_;
@@ -194,6 +194,22 @@ double Cache::hitRatio() const {
     }
 
     return static_cast<double>(hits_) / totalRequests;
+}
+
+vector<string> Cache::keys() const {
+
+    vector<string> result;
+
+    Node* current = head_;
+
+    while (current != nullptr) {
+
+        result.push_back(current->key);
+
+        current = current->next;
+    }
+
+    return result;
 }
 
 } 

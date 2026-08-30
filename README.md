@@ -1,11 +1,10 @@
-@'
 # FlowCache
 
 ## High-Performance Concurrent In-Memory Cache Engine
 
 FlowCache is a thread-safe in-memory cache engine written in modern C++.
 
-It uses a hash table for O(1) average key lookup and a doubly linked list to implement **Least Recently Used (LRU)** eviction. The engine supports concurrent cache operations, runtime statistics, cache inspection, automated tests, and workload-based performance benchmarking.
+It uses a hash table for **O(1) average key lookup** and a doubly linked list to implement **Least Recently Used (LRU)** eviction. The engine supports concurrent cache operations, runtime statistics, cache inspection, automated tests, and workload-based performance benchmarking.
 
 The project was designed as a systems-oriented C++ project to explore:
 
@@ -44,6 +43,7 @@ Concurrent operations are tested across multiple threads to verify:
 - GET operations are tracked correctly
 - Cache key inspection remains consistent
 - LRU ordering remains correct
+- Shared cache state remains consistent under concurrent access
 
 ### Cache Statistics
 

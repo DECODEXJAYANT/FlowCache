@@ -12,6 +12,16 @@ using namespace std;
 namespace flowcache
 {
 
+    struct CacheStats
+    {
+        size_t size;
+        size_t capacity;
+        size_t hits;
+        size_t misses;
+        size_t evictions;
+        double hitRatio;
+    };
+
     class Cache
     {
     public:
@@ -36,8 +46,11 @@ namespace flowcache
 
         vector<string> keys() const;
 
+        CacheStats stats() const;
+
     private:
         mutable mutex mutex_;
+
         struct Node
         {
             string key;

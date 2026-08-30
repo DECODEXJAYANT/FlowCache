@@ -220,4 +220,27 @@ vector<string> Cache::keys() const {
     return result;
 }
 
+CacheStats Cache::stats() const
+{
+    lock_guard<mutex> lock(mutex_);
+
+    size_t totalRequests = hits_ + misses_;
+
+    double ratio = 0.0;
+
+    if (totalRequests > 0)
+    {
+        ratio = static_cast<double>(hits_) / totalRequests;
+    }
+
+    return CacheStats{
+        data_.size(),
+        capacity_,
+        hits_,
+        misses_,
+        evictions_,
+        ratio
+    };
+}
+
 } 

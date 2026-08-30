@@ -10,6 +10,12 @@
 using namespace std;
 using namespace chrono;
 
+struct BenchmarkResult
+{
+    double throughput;
+    flowcache::CacheStats stats;
+};
+
 void worker(
     flowcache::Cache& cache,
     int operations
@@ -43,18 +49,18 @@ void worker(
     }
 }
 
-double runOnce(
+BenchmarkResult runOnce(
     int threadCount,
     int operationsPerThread
-) {
-
+)
+{
     const size_t cacheCapacity = 100000;
 
     flowcache::Cache cache(cacheCapacity);
 
     // Pre-populate shared working set.
-    for (int i = 0; i < 1000; i++) {
-
+    for (int i = 0; i < 1000; i++)
+    {
         cache.put(
             "key_" + to_string(i),
             "initial_value"
@@ -65,8 +71,8 @@ double runOnce(
 
     auto start = high_resolution_clock::now();
 
-    for (int i = 0; i < threadCount; i++) {
-
+    for (int i = 0; i < threadCount; i++)
+    {
         threads.emplace_back(
             worker,
             ref(cache),
@@ -74,7 +80,8 @@ double runOnce(
         );
     }
 
-    for (auto& thread : threads) {
+    for (auto& thread : threads)
+    {
         thread.join();
     }
 
@@ -92,43 +99,62 @@ double runOnce(
     double throughput =
         totalOperations / seconds;
 
-    return throughput;
+    BenchmarkResult result;
+
+    result.throughput = throughput;
+    result.stats = cache.stats();
+
+    return result;
 }
 
 void runBenchmark(
     int threadCount,
     int operationsPerThread,
     int runs
-) {
-
+)
+{
     vector<double> results;
 
+    flowcache::CacheStats finalStats{};
+
     cout << "\n----------------------------------" << endl;
-    cout << "Threads: " << threadCount << endl;
+
+    cout << "Threads: "
+         << threadCount
+         << endl;
+
     cout << "Operations per run: "
          << threadCount * operationsPerThread
          << endl;
-    cout << "Runs: " << runs << endl;
 
-    for (int i = 0; i < runs; i++) {
+    cout << "Runs: "
+         << runs
+         << endl;
 
-        double throughput =
+    for (int i = 0; i < runs; i++)
+    {
+        BenchmarkResult result =
             runOnce(
                 threadCount,
                 operationsPerThread
             );
 
-        results.push_back(throughput);
+        results.push_back(result.throughput);
 
-        cout << "Run " << i + 1 << ": "
-             << throughput
+        finalStats = result.stats;
+
+        cout << "Run "
+             << i + 1
+             << ": "
+             << result.throughput
              << " operations/sec"
              << endl;
     }
 
     double total = 0.0;
 
-    for (double result : results) {
+    for (double result : results)
+    {
         total += result;
     }
 
@@ -136,10 +162,16 @@ void runBenchmark(
         total / results.size();
 
     double minimum =
-        *min_element(results.begin(), results.end());
+        *min_element(
+            results.begin(),
+            results.end()
+        );
 
     double maximum =
-        *max_element(results.begin(), results.end());
+        *max_element(
+            results.begin(),
+            results.end()
+        );
 
     cout << "\nSummary:" << endl;
 
@@ -156,6 +188,33 @@ void runBenchmark(
     cout << "Maximum throughput: "
          << maximum
          << " operations/sec"
+         << endl;
+
+    cout << "\nCache statistics:" << endl;
+
+    cout << "Size: "
+         << finalStats.size
+         << endl;
+
+    cout << "Capacity: "
+         << finalStats.capacity
+         << endl;
+
+    cout << "Hits: "
+         << finalStats.hits
+         << endl;
+
+    cout << "Misses: "
+         << finalStats.misses
+         << endl;
+
+    cout << "Evictions: "
+         << finalStats.evictions
+         << endl;
+
+    cout << "Hit ratio: "
+         << finalStats.hitRatio * 100.0
+         << "%"
          << endl;
 }
 

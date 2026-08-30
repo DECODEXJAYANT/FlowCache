@@ -11,7 +11,6 @@ using namespace std;
 
 void check(bool condition, const string &testName)
 {
-
     if (condition)
     {
         cout << "[PASS] " << testName << endl;
@@ -25,7 +24,6 @@ void check(bool condition, const string &testName)
 
 void testPutAndGet()
 {
-
     flowcache::Cache cache(3);
 
     cache.put("A", "Apple");
@@ -39,7 +37,6 @@ void testPutAndGet()
 
 void testCacheMiss()
 {
-
     flowcache::Cache cache(3);
 
     auto result = cache.get("Missing");
@@ -51,7 +48,6 @@ void testCacheMiss()
 
 void testRemove()
 {
-
     flowcache::Cache cache(3);
 
     cache.put("A", "Apple");
@@ -66,7 +62,6 @@ void testRemove()
 
 void testLRUEviction()
 {
-
     flowcache::Cache cache(3);
 
     cache.put("A", "Apple");
@@ -103,7 +98,6 @@ void testLRUEviction()
 
 void testStatistics()
 {
-
     flowcache::Cache cache(2);
 
     cache.put("A", "Apple");
@@ -135,9 +129,55 @@ void testStatistics()
         "Hit ratio");
 }
 
+// Phase 8.1:
+// Test the structured CacheStats snapshot.
+void testCacheStats()
+{
+    flowcache::Cache cache(3);
+
+    cache.put("A", "Apple");
+    cache.put("B", "Banana");
+    cache.put("C", "Cherry");
+
+    // Two successful GET operations.
+    cache.get("A");
+    cache.get("B");
+
+    // One failed GET operation.
+    cache.get("Missing");
+
+    // Cache is full, so this causes one LRU eviction.
+    cache.put("D", "Dragonfruit");
+
+    flowcache::CacheStats stats = cache.stats();
+
+    check(
+        stats.size == 3,
+        "CacheStats reports correct size");
+
+    check(
+        stats.capacity == 3,
+        "CacheStats reports correct capacity");
+
+    check(
+        stats.hits == 2,
+        "CacheStats reports correct hits");
+
+    check(
+        stats.misses == 1,
+        "CacheStats reports correct misses");
+
+    check(
+        stats.evictions == 1,
+        "CacheStats reports correct evictions");
+
+    check(
+        stats.hitRatio == (2.0 / 3.0),
+        "CacheStats reports correct hit ratio");
+}
+
 void testCapacityOne()
 {
-
     flowcache::Cache cache(1);
 
     cache.put("A", "Apple");
@@ -157,7 +197,6 @@ void testCapacityOne()
 
 void testUpdateExistingKey()
 {
-
     flowcache::Cache cache(3);
 
     cache.put("A", "Apple");
@@ -176,7 +215,6 @@ void testUpdateExistingKey()
 
 void testRemoveMissingKey()
 {
-
     flowcache::Cache cache(3);
 
     bool removed = cache.remove("Missing");
@@ -192,7 +230,6 @@ void testRemoveMissingKey()
 
 void testRepeatedGet()
 {
-
     flowcache::Cache cache(3);
 
     cache.put("A", "Apple");
@@ -212,7 +249,6 @@ void testRepeatedGet()
 
 void testEmptyKeyAndValue()
 {
-
     flowcache::Cache cache(3);
 
     cache.put("", "");
@@ -226,7 +262,6 @@ void testEmptyKeyAndValue()
 
 void testConcurrentAccess()
 {
-
     flowcache::Cache cache(100);
 
     const int threadCount = 4;
@@ -236,21 +271,21 @@ void testConcurrentAccess()
 
     for (int i = 0; i < threadCount; i++)
     {
-
         threads.emplace_back([&cache, i]()
-                             {
+        {
+            for (int j = 0; j < operationsPerThread; j++)
+            {
+                string key =
+                    "thread_" + to_string(i) +
+                    "_key_" + to_string(j % 10);
 
-            for (int j = 0; j < operationsPerThread; j++) {
-
-                string key = "thread_" + to_string(i) +
-                             "_key_" + to_string(j % 10);
-
-                string value = "value_" + to_string(j);
+                string value =
+                    "value_" + to_string(j);
 
                 cache.put(key, value);
-
                 cache.get(key);
-            } });
+            }
+        });
     }
 
     for (auto &thread : threads)
@@ -269,7 +304,6 @@ void testConcurrentAccess()
 
 int main()
 {
-
     cout << "==================================" << endl;
     cout << "       FlowCache Test Suite       " << endl;
     cout << "==================================" << endl;
@@ -279,6 +313,9 @@ int main()
     testRemove();
     testLRUEviction();
     testStatistics();
+
+    // Phase 8.1
+    testCacheStats();
 
     testCapacityOne();
     testUpdateExistingKey();
@@ -292,12 +329,10 @@ int main()
 
     try
     {
-
         flowcache::Cache invalidCache(0);
     }
     catch (const invalid_argument &)
     {
-
         caughtCapacityError = true;
     }
 
@@ -318,13 +353,13 @@ int main()
 
     for (int i = 0; i < 4; i++)
     {
-
         keyThreads.emplace_back([&keyCache]()
-                                {
-
-        for (int j = 0; j < 1000; j++) {
-            keyCache.keys();
-        } });
+        {
+            for (int j = 0; j < 1000; j++)
+            {
+                keyCache.keys();
+            }
+        });
     }
 
     for (auto &thread : keyThreads)
@@ -348,9 +383,9 @@ int main()
 
     check(
         keys.size() == 3 &&
-            keys[0] == "C" &&
-            keys[1] == "B" &&
-            keys[2] == "A",
+        keys[0] == "C" &&
+        keys[1] == "B" &&
+        keys[2] == "A",
         "Keys return MRU to LRU");
 
     cache.get("A");
@@ -359,9 +394,9 @@ int main()
 
     check(
         keys.size() == 3 &&
-            keys[0] == "A" &&
-            keys[1] == "C" &&
-            keys[2] == "B",
+        keys[0] == "A" &&
+        keys[1] == "C" &&
+        keys[2] == "B",
         "GET updates key order");
 
     cout << "\nAll tests passed!" << endl;

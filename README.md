@@ -2,61 +2,82 @@
 
 ## High-Performance Concurrent In-Memory Cache Engine
 
-FlowCache is a thread-safe in-memory cache engine written in modern C++.
+FlowCache is a **thread-safe, high-performance in-memory cache engine written in modern C++**.
 
-It uses a hash table for **O(1) average key lookup** and a doubly linked list to implement **Least Recently Used (LRU)** eviction. The engine supports concurrent cache operations, runtime statistics, cache inspection, automated tests, and workload-based performance benchmarking.
+It is designed as a systems-oriented project to explore how in-memory caching systems work internally, with a focus on **fast lookup, LRU eviction, concurrency, cache statistics, workload simulation, and performance analysis**.
 
-The project was designed as a systems-oriented C++ project to explore:
+FlowCache uses a **hash table (`std::unordered_map`)** for O(1) average key lookup and a **doubly linked list (`std::list`)** to maintain Least Recently Used (LRU) ordering.
 
-- In-memory data structures
-- LRU cache design
-- Hash-table based lookup
+The project includes:
+
+- Core cache operations
+- LRU eviction
 - Thread-safe concurrent access
-- Cache statistics
-- Multithreaded workloads
-- Performance benchmarking
+- Runtime cache statistics
+- Cache key inspection
+- Automated test suite
+- Multithreaded benchmarks
+- Multiple realistic workload patterns
+- Stress testing with working sets larger than cache capacity
 - Scalability analysis
 
 ---
 
-## Features
+# Table of Contents
 
-### Core Cache
+- [Overview](#overview)
+- [Why FlowCache?](#why-flowcache)
+- [Architecture](#architecture)
+- [Core Features](#core-features)
+- [LRU Design](#lru-design)
+- [Thread Safety](#thread-safety)
+- [Cache Statistics](#cache-statistics)
+- [Project Structure](#project-structure)
+- [Requirements](#requirements)
+- [Building the Project](#building-the-project)
+- [Running the Cache](#running-the-cache)
+- [Running Tests](#running-tests)
+- [Benchmarking](#benchmarking)
+- [Benchmark Workloads](#benchmark-workloads)
+- [Performance Results](#performance-results)
+- [API Overview](#api-overview)
+- [Example Usage](#example-usage)
+- [Correctness Testing](#correctness-testing)
+- [Design Decisions](#design-decisions)
+- [Complexity Analysis](#complexity-analysis)
+- [Limitations](#limitations)
+- [Future Work](#future-work)
+- [Learning Outcomes](#learning-outcomes)
+- [Roadmap](#roadmap)
+- [Conclusion](#conclusion)
 
-- `PUT` key/value storage
-- `GET` key/value retrieval
-- `REMOVE` key deletion
-- Configurable cache capacity
-- O(1) average hash-table lookup
-- LRU eviction
-- Updating an existing key without increasing cache size
-- Empty keys and values supported
-- Invalid zero-capacity cache rejected
+---
 
-### Thread Safety
+# Overview
 
-FlowCache supports concurrent access using a mutex-protected cache implementation.
+Modern applications frequently access the same data repeatedly.
 
-Concurrent operations are tested across multiple threads to verify:
+Instead of retrieving data from a slower backend, database, or external service every time, frequently accessed data can be temporarily stored in memory.
 
-- Cache capacity remains valid
-- GET operations are tracked correctly
-- Cache key inspection remains consistent
-- LRU ordering remains correct
-- Shared cache state remains consistent under concurrent access
+This is the fundamental idea behind caching.
 
-### Cache Statistics
+FlowCache implements a simplified but realistic cache engine that provides:
 
-FlowCache exposes runtime statistics including:
-
-- Current cache size
-- Cache capacity
-- Cache hits
-- Cache misses
-- LRU evictions
-- Hit ratio
-
-The statistics API is available through:
-
-```cpp
-CacheStats stats() const;
+```text
+Application
+     |
+     v
++----------------------+
+|      FlowCache       |
+|                      |
+|  Hash Table          |
+|       +              |
+|  LRU Linked List     |
+|       +              |
+|  Statistics          |
+|       +              |
+|  Thread Safety       |
++----------------------+
+     |
+     v
+Fast In-Memory Access

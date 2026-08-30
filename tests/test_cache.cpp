@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <thread>
 #include <vector>
+#include <stdexcept>
 
 #include "flowcache/Cache.h"
 
@@ -286,6 +287,56 @@ int main()
     testEmptyKeyAndValue();
 
     testConcurrentAccess();
+
+    bool caughtCapacityError = false;
+
+    try
+    {
+
+        flowcache::Cache invalidCache(0);
+    }
+    catch (const invalid_argument &)
+    {
+
+        caughtCapacityError = true;
+    }
+
+    check(
+        caughtCapacityError,
+        "Zero capacity is rejected");
+
+    flowcache::Cache keyCache(100);
+
+    for (int i = 0; i < 50; i++)
+    {
+        keyCache.put(
+            "key_" + to_string(i),
+            "value");
+    }
+
+    vector<thread> keyThreads;
+
+    for (int i = 0; i < 4; i++)
+    {
+
+        keyThreads.emplace_back([&keyCache]()
+                                {
+
+        for (int j = 0; j < 1000; j++) {
+            keyCache.keys();
+        } });
+    }
+
+    for (auto &thread : keyThreads)
+    {
+        thread.join();
+    }
+
+    auto concurrentKeys = keyCache.keys();
+
+    check(
+        concurrentKeys.size() == 50,
+        "Concurrent key inspection");
 
     flowcache::Cache cache(3);
 

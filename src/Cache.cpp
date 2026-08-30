@@ -1,10 +1,16 @@
 #include "flowcache/Cache.h"
+#include <stdexcept>
 
 using namespace std;
 
 namespace flowcache {
 
 Cache::Cache(size_t capacity) {
+
+    if (capacity == 0) {
+        throw invalid_argument("Cache capacity must be greater than zero");
+    }
+
     capacity_ = capacity;
 
     hits_ = 0;
@@ -197,6 +203,8 @@ double Cache::hitRatio() const {
 }
 
 vector<string> Cache::keys() const {
+
+    lock_guard<mutex> lock(mutex_);
 
     vector<string> result;
 

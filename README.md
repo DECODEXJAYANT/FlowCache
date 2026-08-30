@@ -1,45 +1,62 @@
+@'
 # FlowCache
 
-High-Performance Concurrent In-Memory Cache Engine
+## High-Performance Concurrent In-Memory Cache Engine
 
-## Overview
+FlowCache is a thread-safe in-memory cache engine written in modern C++.
 
-FlowCache is a high-performance, thread-safe in-memory caching system designed to reduce application latency and backend workload by efficiently storing frequently accessed data.
+It uses a hash table for O(1) average key lookup and a doubly linked list to implement **Least Recently Used (LRU)** eviction. The engine supports concurrent cache operations, runtime statistics, cache inspection, automated tests, and workload-based performance benchmarking.
 
-The project focuses on:
+The project was designed as a systems-oriented C++ project to explore:
 
-- Efficient cache data structures
-- LRU and LFU eviction policies
-- TTL-based expiration
-- Concurrent cache access
+- In-memory data structures
+- LRU cache design
+- Hash-table based lookup
+- Thread-safe concurrent access
+- Cache statistics
+- Multithreaded workloads
 - Performance benchmarking
-- Workload-based performance analysis
+- Scalability analysis
 
-## Tech Stack
+---
 
-- C++17/20
-- STL
-- CMake
-- Multithreading
-- Python
-- FastAPI
-- Redis
-- Git/GitHub
+## Features
 
-## Project Status
+### Core Cache
 
-🚧 Under Development
+- `PUT` key/value storage
+- `GET` key/value retrieval
+- `REMOVE` key deletion
+- Configurable cache capacity
+- O(1) average hash-table lookup
+- LRU eviction
+- Updating an existing key without increasing cache size
+- Empty keys and values supported
+- Invalid zero-capacity cache rejected
 
-## Planned Features
+### Thread Safety
 
-- [ ] Basic cache operations
-- [ ] Hash-map based storage
-- [ ] LRU eviction
-- [ ] TTL expiration
-- [ ] Thread-safe access
-- [ ] Cache statistics
-- [ ] Multithreaded benchmarking
-- [ ] LFU eviction
-- [ ] FastAPI integration
-- [ ] Redis comparison
-- [ ] Performance analysis
+FlowCache supports concurrent access using a mutex-protected cache implementation.
+
+Concurrent operations are tested across multiple threads to verify:
+
+- Cache capacity remains valid
+- GET operations are tracked correctly
+- Cache key inspection remains consistent
+- LRU ordering remains correct
+
+### Cache Statistics
+
+FlowCache exposes runtime statistics including:
+
+- Current cache size
+- Cache capacity
+- Cache hits
+- Cache misses
+- LRU evictions
+- Hit ratio
+
+The statistics API is available through:
+
+```cpp
+CacheStats stats() const;

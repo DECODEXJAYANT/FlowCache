@@ -10,74 +10,88 @@
 using namespace std;
 using namespace chrono;
 
+struct Workload
+{
+    string name;
+
+    int getPercent;
+    int putPercent;
+    int removePercent;
+};
+
 struct BenchmarkResult
 {
     double throughput;
     flowcache::CacheStats stats;
 };
 
-void worker(
-    flowcache::Cache& cache,
-    int operations
-) {
-
-    for (int i = 0; i < operations; i++) {
-
-        int operation = i % 10;
-
-        string key =
-            "key_" + to_string(i % 1000);
-
-        if (operation < 7) {
-
-            // 70% GET
-            cache.get(key);
-
-        } else if (operation < 9) {
-
-            // 20% PUT
-            cache.put(
-                key,
-                "value_" + to_string(i)
-            );
-
-        } else {
-
-            // 10% REMOVE
-            cache.remove(key);
-        }
-    }
-}
-
 BenchmarkResult runOnce(
+    const Workload& workload,
     int threadCount,
-    int operationsPerThread
-)
+    int operationsPerThread,
+    size_t cacheCapacity,
+    size_t workingSet)
 {
-    const size_t cacheCapacity = 100000;
-
     flowcache::Cache cache(cacheCapacity);
 
-    // Pre-populate shared working set.
-    for (int i = 0; i < 1000; i++)
+    // Pre-populate the cache.
+    for (size_t i = 0; i < min(cacheCapacity, workingSet); i++)
     {
         cache.put(
             "key_" + to_string(i),
-            "initial_value"
-        );
+            "initial_value");
     }
+
+    auto worker = [&](int threadId)
+    {
+        for (int i = 0; i < operationsPerThread; i++)
+        {
+            int operation = i % 100;
+
+            // Spread accesses across the entire working set.
+            size_t keyIndex =
+                (static_cast<size_t>(threadId) *
+                     operationsPerThread +
+                 static_cast<size_t>(i)) %
+                workingSet;
+
+            string key =
+                "key_" + to_string(keyIndex);
+
+            if (operation < workload.getPercent)
+            {
+                // GET
+                cache.get(key);
+            }
+            else if (
+                operation <
+                workload.getPercent +
+                    workload.putPercent)
+            {
+                // PUT
+                cache.put(
+                    key,
+                    "value_" + to_string(threadId) +
+                        "_" + to_string(i));
+            }
+            else
+            {
+                // REMOVE
+                cache.remove(key);
+            }
+        }
+    };
 
     vector<thread> threads;
 
-    auto start = high_resolution_clock::now();
+    auto start =
+        high_resolution_clock::now();
 
     for (int i = 0; i < threadCount; i++)
     {
         threads.emplace_back(
             worker,
-            ref(cache),
-            operationsPerThread
-        );
+            i);
     }
 
     for (auto& thread : threads)
@@ -85,10 +99,12 @@ BenchmarkResult runOnce(
         thread.join();
     }
 
-    auto end = high_resolution_clock::now();
+    auto end =
+        high_resolution_clock::now();
 
     auto duration =
-        duration_cast<microseconds>(end - start);
+        duration_cast<microseconds>(
+            end - start);
 
     double seconds =
         duration.count() / 1'000'000.0;
@@ -108,16 +124,24 @@ BenchmarkResult runOnce(
 }
 
 void runBenchmark(
+    const Workload& workload,
     int threadCount,
     int operationsPerThread,
-    int runs
-)
+    int runs,
+    size_t cacheCapacity,
+    size_t workingSet,
+    double baselineThroughput)
 {
     vector<double> results;
 
     flowcache::CacheStats finalStats{};
 
-    cout << "\n----------------------------------" << endl;
+    cout << "\n----------------------------------"
+         << endl;
+
+    cout << "Workload: "
+         << workload.name
+         << endl;
 
     cout << "Threads: "
          << threadCount
@@ -125,6 +149,23 @@ void runBenchmark(
 
     cout << "Operations per run: "
          << threadCount * operationsPerThread
+         << endl;
+
+    cout << "Distribution: "
+         << workload.getPercent
+         << "% GET, "
+         << workload.putPercent
+         << "% PUT, "
+         << workload.removePercent
+         << "% REMOVE"
+         << endl;
+
+    cout << "Cache capacity: "
+         << cacheCapacity
+         << endl;
+
+    cout << "Working set: "
+         << workingSet
          << endl;
 
     cout << "Runs: "
@@ -135,13 +176,17 @@ void runBenchmark(
     {
         BenchmarkResult result =
             runOnce(
+                workload,
                 threadCount,
-                operationsPerThread
-            );
+                operationsPerThread,
+                cacheCapacity,
+                workingSet);
 
-        results.push_back(result.throughput);
+        results.push_back(
+            result.throughput);
 
-        finalStats = result.stats;
+        finalStats =
+            result.stats;
 
         cout << "Run "
              << i + 1
@@ -164,16 +209,15 @@ void runBenchmark(
     double minimum =
         *min_element(
             results.begin(),
-            results.end()
-        );
+            results.end());
 
     double maximum =
         *max_element(
             results.begin(),
-            results.end()
-        );
+            results.end());
 
-    cout << "\nSummary:" << endl;
+    cout << "\nSummary:"
+         << endl;
 
     cout << "Average throughput: "
          << average
@@ -190,7 +234,20 @@ void runBenchmark(
          << " operations/sec"
          << endl;
 
-    cout << "\nCache statistics:" << endl;
+    if (baselineThroughput > 0.0)
+    {
+        double scalability =
+            (average / baselineThroughput) *
+            100.0;
+
+        cout << "Scalability vs 1 thread: "
+             << scalability
+             << "%"
+             << endl;
+    }
+
+    cout << "\nCache statistics:"
+         << endl;
 
     cout << "Size: "
          << finalStats.size
@@ -218,35 +275,110 @@ void runBenchmark(
          << endl;
 }
 
-int main() {
+int main()
+{
+    const int operationsPerThread =
+        100000;
 
-    const int operationsPerThread = 100000;
-    const int runs = 5;
+    const int runs = 3;
 
-    cout << "==================================" << endl;
-    cout << "   FlowCache Benchmark Suite      " << endl;
-    cout << "==================================" << endl;
+    const size_t cacheCapacity =
+        10000;
 
-    cout << "Workload: 70% GET, 20% PUT, 10% REMOVE"
+    const size_t workingSet =
+        100000;
+
+    vector<Workload> workloads =
+    {
+        {
+            "Read Heavy",
+            90,
+            5,
+            5
+        },
+        {
+            "Balanced",
+            70,
+            20,
+            10
+        },
+        {
+            "Write Heavy",
+            30,
+            50,
+            20
+        },
+        {
+            "High Churn",
+            20,
+            60,
+            20
+        }
+    };
+
+    cout << "=================================="
          << endl;
 
-    runBenchmark(
-        1,
-        operationsPerThread,
-        runs
-    );
+    cout << "   FlowCache Workload Benchmark   "
+         << endl;
 
-    runBenchmark(
-        4,
-        operationsPerThread,
-        runs
-    );
+    cout << "=================================="
+         << endl;
 
-    runBenchmark(
-        8,
-        operationsPerThread,
-        runs
-    );
+    cout << "Working set exceeds cache capacity"
+         << endl;
+
+    cout << "Cache capacity: "
+         << cacheCapacity
+         << endl;
+
+    cout << "Working set: "
+         << workingSet
+         << endl;
+
+    for (const auto& workload : workloads)
+    {
+        double baselineThroughput = 0.0;
+
+        // First run with one thread.
+        BenchmarkResult baseline =
+            runOnce(
+                workload,
+                1,
+                operationsPerThread,
+                cacheCapacity,
+                workingSet);
+
+        baselineThroughput =
+            baseline.throughput;
+
+        runBenchmark(
+            workload,
+            1,
+            operationsPerThread,
+            runs,
+            cacheCapacity,
+            workingSet,
+            baselineThroughput);
+
+        runBenchmark(
+            workload,
+            4,
+            operationsPerThread,
+            runs,
+            cacheCapacity,
+            workingSet,
+            baselineThroughput);
+
+        runBenchmark(
+            workload,
+            8,
+            operationsPerThread,
+            runs,
+            cacheCapacity,
+            workingSet,
+            baselineThroughput);
+    }
 
     return 0;
 }
